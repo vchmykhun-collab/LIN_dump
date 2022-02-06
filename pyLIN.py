@@ -15,7 +15,7 @@ class LIN():
         self.__portNumber=portnum
         try:
             self.__portInstance=serial.Serial(self.__portNumber,baud,timeout=0.1)
-        except IOError as e:            
+        except IOError as e:
             print (e)
         
     def close(self):
@@ -55,10 +55,25 @@ class LIN():
 
         return ''.join( dbytes )
     
-    def sendHeader(self,address):        
+    # def checksum(self, hexStr):
+
+    #     dbytes = [] 
+    #     hexStr = ''.join( hexStr.split(" ") )
+
+    #     checksum = 0
+    #     sum = 0
+    #     for i in range(0, len(hexStr), 2):
+    #         x = chr( int (hexStr[i:i+2], 16 ) )
+    #         sum = sum + x        
+    #         if sum >= 256:
+    #             sum = sum-255
+    #     sum = 0xff & (~sum)
+    #     pass
+
+    def sendHeader(self,address):
         self.__portInstance.sendBreak(self.BREAK_TIMING)
         self.__portInstance.write(chr(self.SYNC_BYTE))
-        self.__portInstance.write(chr(address)) 
+        self.__portInstance.write(chr(address))
   
   
     def readResponse(self,readlen):
@@ -72,17 +87,16 @@ class LIN():
         Hence, the first 2 bytes read will result in SYNC (0x55) & 
         Address(transmitted in header) bytes.
         
-        For the actual message, we read these 2 bytes and discard them.        
-        '''        
-        self.__portInstance.read(2)
-        return self.byteToHex(self.__portInstance.read(readlen))
-          
-                      
+        For the actual message, we read these 2 bytes and discard them.
+        '''
+        sync_byte = self.__portInstance.read(1)
+        addr = self.__portInstance.read(1)
+        data = self.__portInstance.read(readlen-1)
+        checksum = self.__portInstance.read(1)
+        return self.byteToHex(addr) + ': '+ self.byteToHex(data) + ' |' + self.byteToHex(checksum)
+    
     def sendMessage(self,msg):
         if(0== self.__portInstance.write(self.hexToByte(msg))):
             print ("Write error : flushing I/O buffers")
             self.__portInstance.flushInput()
             self.__portInstance.flushOutput()
-
-
-version='0.1'
